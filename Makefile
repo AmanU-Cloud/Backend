@@ -58,6 +58,8 @@ run:
 	go run $(CMD_PATH)
 	go test ./...
 
+#не работает в PowerShell - использовать Git Bash
+.PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
 
