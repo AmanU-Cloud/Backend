@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 import (
@@ -16,21 +16,35 @@ import (
 func main() {
 	_ = uuid.New()
 
-	err := godotenv.Load(".env")
+func (c *conf) getConf() *conf {
+	yamlFile, err := os.ReadFile("cfg/config.yaml")
 	if err != nil {
-		log.Fatalf("Error loading .env file: %V", err)
+		log.Printf("yamlFile.Get err   #%v ", err)
 	}
+	err = yaml.Unmarshal(yamlFile, c)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+	return c
+}
+
+func main() {
+
+	var config conf
+	config.getConf()
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello Caritas"))
+		_, err := w.Write([]byte("hello Caritas"))
+		if err != nil {
+			return
+		}
 	})
+	port := config.Port
 
-	port := os.Getenv("SERVER_PORT")
-
-	fmt.Println("Listening on :8081")
-	err = http.ListenAndServe(":"+port, mux)
+	fmt.Println("Listening on :", port)
+	err := http.ListenAndServe(":"+port, mux)
 	if err != nil {
 		log.Fatalf("Error starting HTTP server: %V", err)
 	}
