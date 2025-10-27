@@ -1,4 +1,15 @@
-FROM ubuntu:latest
+FROM golang:1.24.7-alpine AS builder
+
 LABEL authors="whoami"
 
-ENTRYPOINT ["top", "-b"]
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY  . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /caritas ./cmd/reviewer
+
+CMD ["/caritas"]
