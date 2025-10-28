@@ -1,3 +1,5 @@
+.PHONY: lint
+
 #для отображения кирилицы в PowerShell ввести
 #chcp 65001
 
@@ -25,6 +27,14 @@ clean:
 
 .PHONY: help
 help:
+	@echo "Available targets:"
+	@echo "  lint           - Run golangci-lint"
+
+lint:
+	golangci-lint run ./...
+
+.DEFAULT_GOAL := help
+
 	@echo "Доступные цели:"
 	@echo "  make build    — Собрать бинарник"
 	@echo "  make run      — Запустить приложение"

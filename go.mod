@@ -1,5 +1,3 @@
-module Caritas-Backend
+module github.com/Backend/reviewer
 
-go 1.24.7
-
-require gopkg.in/yaml.v3 v3.0.1
+go 1.25
