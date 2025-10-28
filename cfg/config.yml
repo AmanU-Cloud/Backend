@@ -12,7 +12,7 @@ cors:
   allowed_origins:
     - "https://домен.com"
     - "https://localhost:8080"
-  allowed_methods: ["POST", "OPTIONS"]
+  allowed_methods: ["POST", "OPTIONS", "GET"]
   allowed_headers:
     - "X-Client-IP"
     - "User-Agent"
