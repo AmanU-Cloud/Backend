@@ -9,6 +9,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type conf struct {
+	Server struct {
+		Port string `yaml:"port"`
+		Host string `yaml:"host"`
+	}
+}
 import (
 	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
 )
@@ -41,10 +47,11 @@ func main() {
 			return
 		}
 	})
-	port := config.Port
+	port := config.Server.Port
+	host := config.Server.Host
 
-	fmt.Println("Listening on :", port)
-	err := http.ListenAndServe(":"+port, mux)
+	fmt.Printf("Listening on %v : %v", host, port)
+	err := http.ListenAndServe(host+":"+port, mux)
 	if err != nil {
 		log.Fatalf("Error starting HTTP server: %V", err)
 	}
