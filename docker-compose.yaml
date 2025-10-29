@@ -7,5 +7,17 @@ services:
       - memcached
   memcached:
     image: memcached:1.6-alpine
+    command: >
+      memcached
+      -m 200
+      -c 1024
+      -t 2
+      -I 20m
+      -l 0.0.0.0
     ports:
     - "11211:11211"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: always
