@@ -9,7 +9,7 @@ services:
     image: memcached:1.6.39-alpine
     command:
       - --conn-limit=1024
-      - --memory-limit=200
+      - --memory-limit=64
       - --threads=2
     ports:
     - "11211:11211"
