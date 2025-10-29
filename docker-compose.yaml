@@ -6,14 +6,11 @@ services:
     depends_on:
       - memcached
   memcached:
-    image: memcached:1.6-alpine
-    command: >
-      memcached
-      -m 200
-      -c 1024
-      -t 2
-      -I 20m
-      -l 0.0.0.0
+    image: memcached:1.6.39-alpine
+    command:
+      - --conn-limit=1024
+      - --memory-limit=200
+      - --threads=2
     ports:
     - "11211:11211"
     ulimits:
