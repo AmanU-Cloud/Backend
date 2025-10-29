@@ -49,9 +49,6 @@ run:
 clean:
 	rm -rf $(BUILD_DIR)
 
-.DEFAULT_GOAL := help
-	rm -f bin/reviewer
-
 .PHONY: help
 help:
 	@echo "Доступные цели:"
