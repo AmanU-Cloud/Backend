@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Caritas-Backend/internal/memecached"
 	"encoding/json"
 	"fmt"
+	"github.com/Backend/reviewer/internal/memecached"
 	"log"
 	"math/rand"
 	"net/http"
