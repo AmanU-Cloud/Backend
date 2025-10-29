@@ -1,3 +1,9 @@
+.PHONY: deps
+deps:
+	@echo "Installing development"
+	@go install go.uber.org/mock/mockgen@latest
+	@echo "Mockgen installed"
+
 .PHONY: generate-mocks
 generate-mocks:
 	@echo "Setting up mock generation with go uber mock"
