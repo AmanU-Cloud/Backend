@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Backend/reviewer/internal/memecached"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/Backend/reviewer/internal/memecached"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"gopkg.in/yaml.v3"
@@ -103,7 +104,10 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("cache has data")
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "HIT")
-		w.Write(item.Value)
+		_, err := w.Write(item.Value)
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
@@ -134,5 +138,8 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "MISS")
-	w.Write(jsonData)
+	_, err = w.Write(jsonData)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
