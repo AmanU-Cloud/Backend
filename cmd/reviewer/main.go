@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,12 +26,6 @@ type conf struct {
 		Ttl     int64  `yaml:"ttl"`
 	}
 }
-import (
-	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
-)
-
-func main() {
-	_ = uuid.New()
 
 func (c *conf) getConf() *conf {
 	yamlFile, err := os.ReadFile("cfg/config.yaml")
@@ -45,18 +40,12 @@ func (c *conf) getConf() *conf {
 }
 
 func main() {
+	_ = uuid.New()
 
 	var config conf
 	config.getConf()
 
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("hello Caritas"))
-		if err != nil {
-			return
-		}
-	})
 
 	//эндпоинт для memcache GET localhost:8080/bubble?n=100000.
 	//вызывать повторно, ttl - 1 минута
