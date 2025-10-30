@@ -43,7 +43,7 @@ func loadConfig(path string) (*Config, error) {
 }
 
 func init() {
-	cfg, err := loadConfig("../cfg/config.yml")
+	cfg, err := loadConfig("../../cfg/config.yml")
 	if err != nil {
 		slog.Error("Ошибка при загрузке (использованы настройки по умолчанию):", slog.Any("error", err))
 		// Используем стандартные настройки
