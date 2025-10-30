@@ -17,10 +17,9 @@ generate-mocks:
 	@echo "TODO: Add specific mockgen commands when interfaces are defined in packages"
 	@echo "Ready to generate mocks for future interfaces"
 
-
 help:
 	@echo "Available targets:"
-  @echo "  deps           - Install development dependencies (mockgen)"
+	@echo "  deps           - Install development dependencies (mockgen)"
 	@echo "  generate-mocks - Generate mocks for interfaces"
 	@echo "  build          - Build the application"
 	@echo "  lint           - Run golangci-lint"
@@ -45,6 +44,10 @@ test-race:
 run:
 	go run $(CMD_PATH)
 
+clean:
+	rm -rf $(BUILD_DIR)
+
+.DEFAULT_GOAL := help
 clean:
 	rm -rf $(BUILD_DIR)
 
