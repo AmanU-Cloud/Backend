@@ -43,7 +43,7 @@ func loadConfig(path string) (*Config, error) {
 }
 
 func init() {
-	cfg, err := loadConfig("../cfg/config.yml") // Относительный путь к файлу конфигурации
+	cfg, err := loadConfig("../cfg/config.yml")
 	if err != nil {
 		slog.Error("Ошибка при загрузке (использованы настройки по умолчанию):", slog.Any("error", err))
 		// Используем стандартные настройки
@@ -52,17 +52,39 @@ func init() {
 				Level  string `yaml:"level"`
 				Format string `yaml:"format"`
 			}{
-				Level:  "info",
+				Level:  "debug",
 				Format: "json", // Значение по умолчанию
 			},
 		}
 	}
 
+	// Проверяем корректность уровня логирования
+	validLevels := map[string]bool{
+		"debug": true,
+		"info":  true,
+		"warn":  true,
+		"error": true,
+	}
+
+	if !validLevels[cfg.Logging.Level] {
+		slog.Warn("Некорректный уровень логирования в конфигурации, установлен 'debug'", slog.Any("provided_level", cfg.Logging.Level))
+		cfg.Logging.Level = "debug"
+	}
+
+	// Проверка корректности формата логирования
+	validFormats := map[string]bool{
+		"json": true,
+		"text": true,
+	}
+
+	if !validFormats[cfg.Logging.Format] {
+		slog.Warn("Некорректный формат логирования в конфигурации, установлен 'json'", slog.Any("provided_format", cfg.Logging.Format))
+		cfg.Logging.Format = "json"
+	}
+
 	// Определяем уровень логирования
 	var level slog.Level
 	switch cfg.Logging.Level {
-	case "debug":
-		level = slog.LevelDebug
 	case "info":
 		level = slog.LevelInfo
 	case "warn":
@@ -70,25 +92,18 @@ func init() {
 	case "error":
 		level = slog.LevelError
 	default:
-		slog.Warn("Указанный уровень логирования не распознается, используется Debug по умолчанию.")
-		level = slog.LevelDebug // Устанавливаем уровень по умолчанию
+		level = slog.LevelDebug
 	}
 
 	// Определяем формат логирования
 	var handler slog.Handler
-	switch cfg.Logging.Format {
-	case "json":
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			AddSource: true,
-			Level:     level,
-		})
-	case "text": // Возможно, поддержка текстового формата
+	if cfg.Logging.Format == "text" {
+
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     level,
 		})
-	default:
-		slog.Warn("Формат логирования не найден, использован JSON по умолчанию")
+	} else {
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     level,
