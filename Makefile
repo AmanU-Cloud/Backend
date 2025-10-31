@@ -13,8 +13,8 @@ all: build
 
 .PHONY: build
 build:
-	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
+	@mkdir -p bin
+	go build -o bin/reviewer ./cmd/reviewer
 
 .PHONY: run
 run:
