@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
+	"github.com/google/uuid"
 )
 
 func main() {
