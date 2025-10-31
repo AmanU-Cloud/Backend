@@ -43,9 +43,10 @@ build:
 
 lint:
 	golangci-lint run ./...
+
 .PHONY: run
 run:
-	go run cmd/reviewer/main.go
+	go run $(CMD_PATH)
 
 .PHONY: test
 test:
@@ -54,27 +55,10 @@ test:
 test-race:
 	go test -race -v ./...
 
-run:
-	go run $(CMD_PATH)
-	go test ./...
-
 #не работает в PowerShell - использовать Git Bash
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
 
 .DEFAULT_GOAL := help
-clean:
-	rm -rf $(BUILD_DIR)
-
-.DEFAULT_GOAL := help
 	rm -f bin/reviewer
-
-.PHONY: help
-help:
-	@echo "Доступные цели:"
-	@echo "  make build    — Собрать бинарник"
-	@echo "  make run      — Запустить приложение"
-	@echo "  make test     — Запустить тесты"
-	@echo "  make clean    — Удалить бинарник"
-	@echo "  make help     — Показать эту справку"
