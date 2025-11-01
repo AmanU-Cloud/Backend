@@ -1,4 +1,4 @@
-module github.com/Backend
+module github.com/Caritas-Team/reviewer
 
 go 1.24.3
 

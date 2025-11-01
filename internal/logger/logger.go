@@ -5,22 +5,20 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 
+	"github.com/Caritas-Team/reviewer/cfg"
 	yaml "gopkg.in/yaml.v3"
 )
 
-var GlobalLogger *slog.Logger
-
-// Структура для представления конфигурации
-type Config struct {
-	Logging struct {
-		Level  string `yaml:"level"`
-		Format string `yaml:"format"`
-	} `yaml:"logging"`
+// Логгер завернут в структуру для удобного управления
+type Logger struct {
+	mu     sync.Mutex   // Мьютекс для защиты от конкурентного доступа
+	logger *slog.Logger // Объект логгера
 }
 
 // Чтение и обработка конфигурации
-func loadConfig(path string) (*Config, error) {
+func loadConfig(path string) (*cfg.Config, error) {
 	fd, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии файла конфигурации: %w", err)
@@ -33,7 +31,7 @@ func loadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("ошибка при чтении файла конфигурации: %w", err)
 	}
 
-	var cfg Config
+	var cfg cfg.Config
 	err = yaml.Unmarshal(buf.Bytes(), &cfg)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при разборе конфигурации: %w", err)
@@ -42,12 +40,13 @@ func loadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-func init() {
-	cfg, err := loadConfig("../../cfg/config.yml")
+// Инициализация логгера
+func NewLogger(configPath string) *Logger {
+	config, err := loadConfig(configPath)
 	if err != nil {
 		slog.Error("Ошибка при загрузке (использованы настройки по умолчанию):", slog.Any("error", err))
 		// Используем стандартные настройки
-		cfg = &Config{
+		config = &cfg.Config{
 			Logging: struct {
 				Level  string `yaml:"level"`
 				Format string `yaml:"format"`
@@ -66,9 +65,9 @@ func init() {
 		"error": true,
 	}
 
-	if !validLevels[cfg.Logging.Level] {
-		slog.Warn("Некорректный уровень логирования в конфигурации, установлен 'debug'", slog.Any("provided_level", cfg.Logging.Level))
-		cfg.Logging.Level = "debug"
+	if !validLevels[config.Logging.Level] {
+		slog.Warn("Некорректный уровень логирования в конфигурации, установлен 'debug'", slog.Any("provided_level", config.Logging.Level))
+		config.Logging.Level = "debug"
 	}
 
 	// Проверка корректности формата логирования
@@ -77,14 +76,14 @@ func init() {
 		"text": true,
 	}
 
-	if !validFormats[cfg.Logging.Format] {
-		slog.Warn("Некорректный формат логирования в конфигурации, установлен 'json'", slog.Any("provided_format", cfg.Logging.Format))
-		cfg.Logging.Format = "json"
+	if !validFormats[config.Logging.Format] {
+		slog.Warn("Некорректный формат логирования в конфигурации, установлен 'json'", slog.Any("provided_format", config.Logging.Format))
+		config.Logging.Format = "json"
 	}
 
 	// Определяем уровень логирования
 	var level slog.Level
-	switch cfg.Logging.Level {
+	switch config.Logging.Level {
 	case "info":
 		level = slog.LevelInfo
 	case "warn":
@@ -97,8 +96,7 @@ func init() {
 
 	// Определяем формат логирования
 	var handler slog.Handler
-	if cfg.Logging.Format == "text" {
-
+	if config.Logging.Format == "text" {
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     level,
@@ -110,28 +108,44 @@ func init() {
 		})
 	}
 
-	GlobalLogger = slog.New(handler)
-	slog.SetDefault(GlobalLogger)
+	// Создаем объект логгера
+	logger := slog.New(handler)
+
+	// Возвращаем завернутый логгер
+	return &Logger{
+		logger: logger,
+	}
 }
 
-// Методы логирования
+// Глобальная переменная логгера
+var GlobalLogger *Logger
 
-// Info записывает инфо-сообщение
-func Info(msg string, args ...any) {
-	GlobalLogger.Info(msg, args...)
+// Инициализация глобального логгера
+func InitGlobalLogger(configPath string) {
+	GlobalLogger = NewLogger(configPath)
 }
 
-// Warn записывает предупреждение
-func Warn(msg string, args ...any) {
-	GlobalLogger.Warn(msg, args...)
+// Методы логирования, защищённые мьютексом
+func (l *Logger) Info(msg string, args ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logger.Info(msg, args...)
 }
 
-// Debug записывает дебаг-сообщение
-func Debug(msg string, args ...any) {
-	GlobalLogger.Debug(msg, args...)
+func (l *Logger) Warn(msg string, args ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logger.Warn(msg, args...)
 }
 
-// Error записывает ошибку
-func Error(msg string, args ...any) {
-	GlobalLogger.Error(msg, args...)
+func (l *Logger) Debug(msg string, args ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logger.Debug(msg, args...)
+}
+
+func (l *Logger) Error(msg string, args ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.logger.Error(msg, args...)
 }
