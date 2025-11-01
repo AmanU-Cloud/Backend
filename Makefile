@@ -1,4 +1,4 @@
-.PHONY: deps generate-mocks build lint test test-race run clean help
+.PHONY: build lint test run clean help
 
 BINARY_NAME=reviewer
 BUILD_DIR=bin
@@ -28,6 +28,15 @@ help:
 	@echo "  run            - Run the application"
 	@echo "  clean          - Clean build artifacts"
 
+#для отображения кирилицы в PowerShell ввести
+#chcp 65001
+
+GOBIN := $(shell go env GOPATH)/bin
+
+.PHONY: all
+all: build
+
+.PHONY: build
 build:
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
@@ -35,19 +44,19 @@ build:
 lint:
 	golangci-lint run ./...
 
+.PHONY: run
+run:
+	go run $(CMD_PATH)
+
+.PHONY: test
 test:
 	go test -v ./...
 
 test-race:
 	go test -race -v ./...
 
-run:
-	go run $(CMD_PATH)
-
-clean:
-	rm -rf $(BUILD_DIR)
-
-.DEFAULT_GOAL := help
+#не работает в PowerShell - использовать Git Bash
+.PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
 
