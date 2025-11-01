@@ -11,10 +11,9 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-// Логгер завернут в структуру для удобного управления
 type Logger struct {
-	mu     sync.Mutex   // Мьютекс для защиты от конкурентного доступа
-	logger *slog.Logger // Объект логгера
+	mu     sync.Mutex
+	logger *slog.Logger
 }
 
 // Чтение и обработка конфигурации
@@ -40,7 +39,7 @@ func loadConfig(path string) (*cfg.Config, error) {
 	return &cfg, nil
 }
 
-// Инициализация логгера
+// Создание логгера
 func NewLogger(configPath string) *Logger {
 	config, err := loadConfig(configPath)
 	if err != nil {
@@ -108,10 +107,8 @@ func NewLogger(configPath string) *Logger {
 		})
 	}
 
-	// Создаем объект логгера
 	logger := slog.New(handler)
 
-	// Возвращаем завернутый логгер
 	return &Logger{
 		logger: logger,
 	}
@@ -125,7 +122,7 @@ func InitGlobalLogger(configPath string) {
 	GlobalLogger = NewLogger(configPath)
 }
 
-// Методы логирования, защищённые мьютексом
+// Методы логирования с мьютексом
 func (l *Logger) Info(msg string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
