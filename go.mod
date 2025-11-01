@@ -1,10 +1,11 @@
-module github.com/Backend
+module github.com/Caritas-Team/reviewer
 
-go 1.24.3
+go 1.25
 
 require github.com/prometheus/client_golang v1.23.2
 
 require (
+  github.com/google/uuid v1.6.0 
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

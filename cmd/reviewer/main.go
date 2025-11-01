@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Backend/internal/metrics"
+  "github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
+	"github.com/Caritas-Team/reviewer/internal/metrics"
 )
 
 func main() {
+  _ = uuid.New()
 	metrics.InitMetrics()
 
 	log.Println("Server run on :8080")
