@@ -1,9 +1,0 @@
-http:
-  address: ":8080"
-
-cors:
-  allowed_origins: []   # пустой = AllowAll
-  allowed_methods: []   # пусто -> дефолты из middleware
-  allowed_headers: []   # пусто -> дефолты из middleware
-  allow_credentials: true
-  max_age_seconds: 3600

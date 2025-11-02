@@ -8,7 +8,7 @@ import (
 )
 
 type HTTP struct {
-	Address string `mapstructure:"address"` // ":8080"
+	Addr string `mapstructure:"addr"`
 }
 
 type CORS struct {
@@ -27,7 +27,7 @@ type Config struct {
 // Defaults —  дефолты, если чего-то нет в конфиге.
 func Defaults() Config {
 	return Config{
-		HTTP: HTTP{Address: ":8080"},
+		HTTP: HTTP{Addr: ":8080"},
 		CORS: CORS{
 			AllowedOrigins:   nil, // пусто = AllowAll
 			AllowedMethods:   nil, // дефолты из handler.DefaultCORSMethods
@@ -45,7 +45,7 @@ func Load() (Config, error) {
 	v := viper.New()
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath("config") // переход в папку config. Если конфиг будет переноситься, надо исправить
+	v.AddConfigPath("cfg") // переход в папку cfg. Если конфиг будет переноситься, надо исправить
 
 	if err := v.ReadInConfig(); err != nil {
 		return cfg, fmt.Errorf("read config: %w", err)
