@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log/slog"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
@@ -13,15 +12,8 @@ func main() {
 	_ = uuid.New()
 	metrics.InitMetrics()
 
-	srv := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  time.Second * 10, // Таймаут на чтение запроса
-		WriteTimeout: time.Second * 10, // Таймаут на запись ответа
-		IdleTimeout:  time.Minute * 5,  // Максимальное время ожидания неактивного подключения
-	}
-
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Ошибка запуска сервера", "err", err)
-		return
+	log.Println("Server run on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server run error: %v", err)
 	}
 }
