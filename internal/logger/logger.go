@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/Caritas-Team/reviewer/cfg"
@@ -18,11 +19,24 @@ type Logger struct {
 
 // Чтение и обработка конфигурации
 func loadConfig(path string) (*cfg.Config, error) {
-	fd, err := os.Open(path)
+	absPath, err := filepath.Abs(path) // Преобразование относительного пути в абсолютный
+	if err != nil {
+		return nil, fmt.Errorf("невозможно преобразовать путь в абсолютный: %w", err)
+	}
+
+	// Нормализация абсолютного пути
+	normPath := filepath.Clean(absPath)
+
+	// Безопасное открытие
+	fd, err := os.Open(normPath)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии файла конфигурации: %w", err)
 	}
-	defer fd.Close()
+	defer func() {
+		if err := fd.Close(); err != nil {
+			slog.Error("не удалось закрыть файл", "error", err)
+		}
+	}()
 
 	buf := bytes.Buffer{}
 	_, err = buf.ReadFrom(fd)
