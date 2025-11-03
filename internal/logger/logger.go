@@ -1,15 +1,12 @@
 package logger
 
 import (
-	"bytes"
-	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
+
 	"sync"
 
-	"github.com/Caritas-Team/reviewer/cfg"
-	yaml "gopkg.in/yaml.v3"
+	"github.com/Caritas-Team/reviewer/internal/config"
 )
 
 type Logger struct {
@@ -17,86 +14,44 @@ type Logger struct {
 	logger *slog.Logger
 }
 
-// Чтение и обработка конфигурации
-func loadConfig(path string) (*cfg.Config, error) {
-	absPath, err := filepath.Abs(path) // Преобразование относительного пути в абсолютный
-	if err != nil {
-		return nil, fmt.Errorf("невозможно преобразовать путь в абсолютный: %w", err)
-	}
-
-	// Нормализация абсолютного пути
-	normPath := filepath.Clean(absPath)
-
-	// Безопасное открытие
-	fd, err := os.Open(normPath)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка при открытии файла конфигурации: %w", err)
-	}
-	defer func() {
-		if err := fd.Close(); err != nil {
-			slog.Error("не удалось закрыть файл", "error", err)
-		}
-	}()
-
-	buf := bytes.Buffer{}
-	_, err = buf.ReadFrom(fd)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка при чтении файла конфигурации: %w", err)
-	}
-
-	var cfg cfg.Config
-	err = yaml.Unmarshal(buf.Bytes(), &cfg)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка при разборе конфигурации: %w", err)
-	}
-
-	return &cfg, nil
-}
-
 // Создание логгера
-func NewLogger(configPath string) *Logger {
-	config, err := loadConfig(configPath)
-	if err != nil {
-		slog.Error("Ошибка при загрузке (использованы настройки по умолчанию):", slog.Any("error", err))
-		// Используем стандартные настройки
-		config = &cfg.Config{
-			Logging: struct {
-				Level  string `yaml:"level"`
-				Format string `yaml:"format"`
-			}{
-				Level:  "debug",
-				Format: "json", // Значение по умолчанию
-			},
-		}
+func NewLogger(cfg config.Config) *Logger {
+	// Локальные переменные для уровня и формата логирования
+	var localLevel string
+	var localFormat string
+
+	// Проверка наличия уровня и формата
+	if cfg.Logging.Level != "" {
+		localLevel = cfg.Logging.Level
+	} else {
+		slog.Warn("Отсутствует уровень логирования, используетя debug")
+		localLevel = "debug"
+	}
+
+	if cfg.Logging.Format != "" {
+		localFormat = cfg.Logging.Format
+	} else {
+		slog.Warn("Отсутствует формат логирования, используется json")
+		localFormat = "json"
 	}
 
 	// Проверяем корректность уровня логирования
-	validLevels := map[string]bool{
-		"debug": true,
-		"info":  true,
-		"warn":  true,
-		"error": true,
-	}
-
-	if !validLevels[config.Logging.Level] {
-		slog.Warn("Некорректный уровень логирования в конфигурации, установлен 'debug'", slog.Any("provided_level", config.Logging.Level))
-		config.Logging.Level = "debug"
+	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
+	if !validLevels[localLevel] {
+		slog.Warn("Некорректный уровень логирования в конфигурации, используем 'debug'.", "provided_level", localLevel)
+		localLevel = "debug"
 	}
 
 	// Проверка корректности формата логирования
-	validFormats := map[string]bool{
-		"json": true,
-		"text": true,
-	}
-
-	if !validFormats[config.Logging.Format] {
-		slog.Warn("Некорректный формат логирования в конфигурации, установлен 'json'", slog.Any("provided_format", config.Logging.Format))
-		config.Logging.Format = "json"
+	validFormats := map[string]bool{"json": true, "text": true}
+	if !validFormats[localFormat] {
+		slog.Warn("Некорректный формат логирования в конфигурации, используем 'json'.", "provided_format", localFormat)
+		localFormat = "json"
 	}
 
 	// Определяем уровень логирования
 	var level slog.Level
-	switch config.Logging.Level {
+	switch localLevel {
 	case "info":
 		level = slog.LevelInfo
 	case "warn":
@@ -109,7 +64,7 @@ func NewLogger(configPath string) *Logger {
 
 	// Определяем формат логирования
 	var handler slog.Handler
-	if config.Logging.Format == "text" {
+	if localFormat == "text" {
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     level,
@@ -121,10 +76,8 @@ func NewLogger(configPath string) *Logger {
 		})
 	}
 
-	logger := slog.New(handler)
-
 	return &Logger{
-		logger: logger,
+		logger: slog.New(handler),
 	}
 }
 
@@ -132,8 +85,8 @@ func NewLogger(configPath string) *Logger {
 var GlobalLogger *Logger
 
 // Инициализация глобального логгера
-func InitGlobalLogger(configPath string) {
-	GlobalLogger = NewLogger(configPath)
+func InitGlobalLogger(cfg config.Config) {
+	GlobalLogger = NewLogger(cfg)
 }
 
 // Методы логирования с мьютексом
