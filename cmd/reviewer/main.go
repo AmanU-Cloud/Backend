@@ -24,19 +24,19 @@ func main() {
 
 	h := handler.CORS(handler.CORSConfig{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
-		AllowedMethods:   cfg.CORS.AllowedMethods, // nil -> дефолты
-		AllowedHeaders:   cfg.CORS.AllowedHeaders, // nil -> дефолты
-		AllowCredentials: cfg.CORS.AllowCredentials,
-		MaxAgeSeconds:    cfg.CORS.MaxAgeSeconds,
+		AllowedMethods:   cfg.CORS.AllowedMethods,
+		AllowedHeaders:   cfg.CORS.AllowedHeaders,
+		AllowCredentials: true, // вынести в config.yaml при надобности
+		MaxAgeSeconds:    3600, // вынести в config.yaml при надобности
 	})(mux)
 
 	metrics.InitMetrics()
 
 	srv := &http.Server{
-		Addr:         cfg.HTTP.Addr,
+		Addr:         cfg.Server.Addr(),
 		Handler:      h,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  cfg.Server.ReadTimeout(),
+		WriteTimeout: cfg.Server.WriteTimeout(),
 		IdleTimeout:  5 * time.Minute,
 	}
 

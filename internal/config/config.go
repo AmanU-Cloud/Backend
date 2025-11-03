@@ -7,45 +7,72 @@ import (
 	"github.com/spf13/viper"
 )
 
-type HTTP struct {
-	Addr string `mapstructure:"addr"`
+type Server struct {
+	Host            string `mapstructure:"host"`
+	Port            int    `mapstructure:"port"`
+	Debug           bool   `mapstructure:"debug"`
+	LogLevel        string `mapstructure:"log_level"`
+	ReadTimeoutSec  int    `mapstructure:"read_timeout"`
+	WriteTimeoutSec int    `mapstructure:"write_timeout"`
 }
 
+func (s Server) Addr() string                { return fmt.Sprintf("%s:%d", s.Host, s.Port) }
+func (s Server) ReadTimeout() time.Duration  { return time.Duration(s.ReadTimeoutSec) * time.Second }
+func (s Server) WriteTimeout() time.Duration { return time.Duration(s.WriteTimeoutSec) * time.Second }
+
 type CORS struct {
-	AllowedOrigins   []string `mapstructure:"allowed_origins"`
-	AllowedMethods   []string `mapstructure:"allowed_methods"`
-	AllowedHeaders   []string `mapstructure:"allowed_headers"`
-	AllowCredentials bool     `mapstructure:"allow_credentials"`
-	MaxAgeSeconds    int      `mapstructure:"max_age_seconds"`
+	AllowedOrigins []string `mapstructure:"allowed_origins"`
+	AllowedMethods []string `mapstructure:"allowed_methods"`
+	AllowedHeaders []string `mapstructure:"allowed_headers"`
+}
+
+type RateLimiter struct {
+	Enabled           bool   `mapstructure:"enabled"`
+	RequestsPerMinute int    `mapstructure:"requests_per_minute"`
+	Storage           string `mapstructure:"storage"`
+}
+
+type Memcached struct {
+	Enable     bool     `mapstructure:"enable"`
+	Servers    []string `mapstructure:"servers"`
+	DefaultTTL int      `mapstructure:"default_ttl"`
+	KeyPrefix  string   `mapstructure:"key_prefix"`
+}
+
+type Files struct {
+	MaxFilesPerRequest int      `mapstructure:"max_files_per_request"`
+	MaxFileSize        int64    `mapstructure:"max_file_size"`
+	MaxProcessingTime  int      `mapstructure:"max_processing_time"`
+	AllowedMIMETypes   []string `mapstructure:"allowed_mime_types"`
+}
+
+type Metrics struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Path    string `mapstructure:"path"`
+}
+
+type Logging struct {
+	Level  string `mapstructure:"level"`
+	Format string `mapstructure:"format"`
 }
 
 type Config struct {
-	HTTP HTTP `mapstructure:"http"`
-	CORS CORS `mapstructure:"cors"`
+	Server      Server      `mapstructure:"server"`
+	CORS        CORS        `mapstructure:"cors"`
+	RateLimiter RateLimiter `mapstructure:"rate_limiter"`
+	Memcached   Memcached   `mapstructure:"memcached"`
+	Files       Files       `mapstructure:"files"`
+	Metrics     Metrics     `mapstructure:"metrics"`
+	Logging     Logging     `mapstructure:"logging"`
 }
 
-// Defaults —  дефолты, если чего-то нет в конфиге.
-func Defaults() Config {
-	return Config{
-		HTTP: HTTP{Addr: ":8080"},
-		CORS: CORS{
-			AllowedOrigins:   nil, // пусто = AllowAll
-			AllowedMethods:   nil, // дефолты из handler.DefaultCORSMethods
-			AllowedHeaders:   nil, // дефолты из handler.DefaultCORSHeaders
-			AllowCredentials: true,
-			MaxAgeSeconds:    int((time.Hour).Seconds()),
-		},
-	}
-}
-
-// Load загружает конфиг из config/config.yaml.
 func Load() (Config, error) {
 	var cfg Config
 
 	v := viper.New()
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath("cfg") // переход в папку cfg. Если конфиг будет переноситься, надо исправить
+	v.AddConfigPath("cfg")
 
 	if err := v.ReadInConfig(); err != nil {
 		return cfg, fmt.Errorf("read config: %w", err)
