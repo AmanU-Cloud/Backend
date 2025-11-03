@@ -5,25 +5,45 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Caritas-Team/reviewer/internal/config"
+	"github.com/Caritas-Team/reviewer/internal/handler"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
   "github.com/Caritas-Team/reviewer/internal/logger"
-	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
 )
 
 func main() {
-	_ = uuid.New()
-  logger.InitGlobalLogger("../../cfg/config.yml")
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("config load error", "err", err)
+		return
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("pong"))
+	})
+
+	h := handler.CORS(handler.CORSConfig{
+		AllowedOrigins:   cfg.CORS.AllowedOrigins,
+		AllowedMethods:   cfg.CORS.AllowedMethods,
+		AllowedHeaders:   cfg.CORS.AllowedHeaders,
+		AllowCredentials: true, // вынести в config.yaml при надобности
+		MaxAgeSeconds:    3600, // вынести в config.yaml при надобности
+	})(mux)
+
 	metrics.InitMetrics()
+  logger.InitGlobalLogger("../../cfg/config.yml")
 
 	srv := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  time.Second * 10, // Таймаут на чтение запроса
-		WriteTimeout: time.Second * 10, // Таймаут на запись ответа
-		IdleTimeout:  time.Minute * 5,  // Максимальное время ожидания неактивного подключения
+		Addr:         cfg.Server.Addr(),
+		Handler:      h,
+		ReadTimeout:  cfg.Server.ReadTimeout(),
+		WriteTimeout: cfg.Server.WriteTimeout(),
+		IdleTimeout:  5 * time.Minute,
 	}
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("Ошибка запуска сервера", "err", err)
+		slog.Error("server start failed", "err", err)
 		return
 	}
 }

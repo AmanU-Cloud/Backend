@@ -1,0 +1,26 @@
+cors:
+  # Полные origins (схема+домен+порт).
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "https://app.example.com"
+
+  # Явный список методов (можно оставить пустым — возьмутся дефолты из middleware).
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+
+  # Разрешённые заголовки (можно оставить пустым — возьмутся дефолты из middleware).
+  allowed_headers:
+    - Content-Type
+    - Authorization
+
+  # Нужны ли куки/JWT. При true — нельзя использовать '*' в allowed_origins, только конкретные домены.
+  allow_credentials: true
+
+  # Кэш preflight-ответа браузером, в секкундах.
+  max_age_seconds: 3600
