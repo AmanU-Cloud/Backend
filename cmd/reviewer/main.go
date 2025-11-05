@@ -8,6 +8,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/handler"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
+	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
 )
 
 func main() {
