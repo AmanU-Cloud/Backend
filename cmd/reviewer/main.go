@@ -33,7 +33,7 @@ func main() {
 		}
 	}(cache)
 
-	if cache.IsHealthy(context.Background()) {
+	if cache.IsHealthy(background) {
 		slog.Info("Memcached is healthy")
 	} else {
 		slog.Warn("Memcached is unavailable")
