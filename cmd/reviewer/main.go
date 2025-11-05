@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -18,22 +19,18 @@ func main() {
 		return
 	}
 
-	serverAddr := cfg.Server.Addr()
-	slog.Info("Starting server", "addr", serverAddr)
+	background := context.Background()
+	cache, err := memecached.NewCache(background, cfg)
+	if err != nil {
+		slog.Error("cache initialization failed", "err", err)
+		return
+	}
+	defer cache.Close()
 
-	if cfg.Memcached.Enable {
-		if len(cfg.Memcached.Servers) == 0 {
-			slog.Error("memcached servers is empty")
-			return
-		}
-		ttl := time.Duration(cfg.Memcached.DefaultTTL) * time.Second
-		memcachedAddr := cfg.Memcached.Servers
-		prefix := cfg.Memcached.KeyPrefix
-		memecached.Init(memcachedAddr, ttl, prefix)
-		slog.Info("Starting memcached server", "addr", memcachedAddr, "ttl", ttl, "prefix", prefix)
-
+	if cache.IsHealthy(context.Background()) {
+		slog.Info("Memcached is healthy")
 	} else {
-		slog.Info("Memcached servers is disabled")
+		slog.Warn("Memcached is unavailable")
 	}
 
 	mux := http.NewServeMux()
