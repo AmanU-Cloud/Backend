@@ -23,6 +23,9 @@ type CacheInterface interface {
 }
 
 func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if !cfg.Memcached.Enable {
 		return &Cache{enable: false}, nil
 	} else {
@@ -41,7 +44,7 @@ func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
 	}
 }
 
-func (c Cache) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -56,7 +59,7 @@ func (c Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	return item.Value, nil
 }
 
-func (c Cache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+func (c *Cache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -72,11 +75,14 @@ func (c Cache) Set(ctx context.Context, key string, value []byte, ttl time.Durat
 	return err
 }
 
-func (c Cache) Close() error {
+func (c *Cache) Close() error {
 	return c.client.Close()
 }
 
 func (c *Cache) IsHealthy(ctx context.Context) bool {
+	if err := ctx.Err(); err != nil {
+		return false
+	}
 	if !c.enable || c.client == nil {
 		return false
 	}
