@@ -29,7 +29,7 @@ func main() {
 	defer func(cache *memecached.Cache) {
 		err := cache.Close()
 		if err != nil {
-
+			slog.Error("cache close error", "err", err)
 		}
 	}(cache)
 
