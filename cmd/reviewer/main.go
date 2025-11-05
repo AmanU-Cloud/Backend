@@ -7,8 +7,8 @@ import (
 
 	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/handler"
+	"github.com/Caritas-Team/reviewer/internal/memecached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
-	"github.com/google/uuid" //добавил и использовал, чтобы появился go.sum
 )
 
 func main() {
@@ -16,6 +16,24 @@ func main() {
 	if err != nil {
 		slog.Error("config load error", "err", err)
 		return
+	}
+
+	serverAddr := cfg.Server.Addr()
+	slog.Info("Starting server", "addr", serverAddr)
+
+	if cfg.Memcached.Enable {
+		if len(cfg.Memcached.Servers) == 0 {
+			slog.Error("memcached servers is empty")
+			return
+		}
+		ttl := time.Duration(cfg.Memcached.DefaultTTL) * time.Second
+		memcachedAddr := cfg.Memcached.Servers
+		prefix := cfg.Memcached.KeyPrefix
+		memecached.Init(memcachedAddr, ttl, prefix)
+		slog.Info("Starting memcached server", "addr", memcachedAddr, "ttl", ttl, "prefix", prefix)
+
+	} else {
+		slog.Info("Memcached servers is disabled")
 	}
 
 	mux := http.NewServeMux()

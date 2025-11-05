@@ -3,6 +3,7 @@ module github.com/Caritas-Team/reviewer
 go 1.25
 
 require (
+	github.com/bradfitz/gomemcache v0.0.0-20250403215159-8d39553ac7cf
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/cors v1.11.1
 	github.com/spf13/viper v1.21.0
