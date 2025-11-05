@@ -7,6 +7,7 @@ import (
 
 	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/handler"
+	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 )
 
@@ -31,6 +32,7 @@ func main() {
 	})(mux)
 
 	metrics.InitMetrics()
+	logger.InitGlobalLogger(cfg)
 
 	srv := &http.Server{
 		Addr:         cfg.Server.Addr(),
