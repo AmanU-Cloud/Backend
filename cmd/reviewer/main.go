@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -25,7 +26,12 @@ func main() {
 		slog.Error("cache initialization failed", "err", err)
 		return
 	}
-	defer cache.Close()
+	defer func(cache *memecached.Cache) {
+		err := cache.Close()
+		if err != nil {
+
+		}
+	}(cache)
 
 	if cache.IsHealthy(context.Background()) {
 		slog.Info("Memcached is healthy")
