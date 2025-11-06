@@ -3,3 +3,17 @@ services:
     build: .
     ports:
       - "8080:8080"
+    depends_on:
+      - memcached
+  memcached:
+    image: memcached:1.6.39-alpine
+    command:
+      - --conn-limit=1024
+      - --memory-limit=64
+      - --threads=2
+    ports:
+    - "11211:11211"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536

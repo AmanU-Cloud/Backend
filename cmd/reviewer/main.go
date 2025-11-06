@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/handler"
 	"github.com/Caritas-Team/reviewer/internal/logger"
+	"github.com/Caritas-Team/reviewer/internal/memecached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 )
 
@@ -16,6 +18,25 @@ func main() {
 	if err != nil {
 		slog.Error("config load error", "err", err)
 		return
+	}
+
+	background := context.Background()
+	cache, err := memecached.NewCache(background, cfg)
+	if err != nil {
+		slog.Error("cache initialization failed", "err", err)
+		return
+	}
+	defer func(cache *memecached.Cache) {
+		err := cache.Close()
+		if err != nil {
+			slog.Error("cache close error", "err", err)
+		}
+	}(cache)
+
+	if cache.IsHealthy(background) {
+		slog.Info("Memcached is healthy")
+	} else {
+		slog.Warn("Memcached is unavailable")
 	}
 
 	mux := http.NewServeMux()
