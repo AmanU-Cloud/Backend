@@ -3,7 +3,6 @@ package metrics
 import (
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -12,8 +11,8 @@ import (
 
 const namespace = "pdf_service" // можно в cfg вынести
 
-// startAt - время старта процесса
-var startAt time.Time = time.Now()
+// // startAt - время старта процесса
+// var startAt time.Time = time.Now()
 
 // once — чтобы безопасно навесить метрики один раз
 var once sync.Once
@@ -75,17 +74,17 @@ var (
 		Help:      "Задержка между постановкой задачи в очередь и началом её обработки (в секундах)",
 	})
 
-	// Время работы сервера (в секундах)
-	serverUptimeSeconds = promauto.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "server_uptime_seconds",
-			Help:      "Время работы сервера (в секундах)",
-		},
-		func() float64 {
-			return time.Since(startAt).Seconds()
-		},
-	)
+	// // Время работы сервера (в секундах)
+	// serverUptimeSeconds = promauto.NewGaugeFunc(
+	// 	prometheus.GaugeOpts{
+	// 		Namespace: namespace,
+	// 		Name:      "server_uptime_seconds",
+	// 		Help:      "Время работы сервера (в секундах)",
+	// 	},
+	// 	func() float64 {
+	// 		return time.Since(startAt).Seconds()
+	// 	},
+	// )
 
 	// Использование оперативной памяти (в байтах)
 	memoryUsageBytes = promauto.NewGauge(prometheus.GaugeOpts{
