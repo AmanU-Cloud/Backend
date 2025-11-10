@@ -21,9 +21,11 @@ func (s Server) ReadTimeout() time.Duration  { return time.Duration(s.ReadTimeou
 func (s Server) WriteTimeout() time.Duration { return time.Duration(s.WriteTimeoutSec) * time.Second }
 
 type CORS struct {
-	AllowedOrigins []string `mapstructure:"allowed_origins"`
-	AllowedMethods []string `mapstructure:"allowed_methods"`
-	AllowedHeaders []string `mapstructure:"allowed_headers"`
+	AllowedOrigins   []string `mapstructure:"allowed_origins"`
+	AllowedMethods   []string `mapstructure:"allowed_methods"`
+	AllowedHeaders   []string `mapstructure:"allowed_headers"`
+	AllowCredentials bool     `mapstructure:"allow_credentials"`
+	MaxAgeSeconds    int      `mapstructure:"max_age_seconds"`
 }
 
 type RateLimiter struct {
@@ -56,14 +58,19 @@ type Logging struct {
 	Format string `mapstructure:"format"`
 }
 
+type GracefulShutdown struct {
+	GraceTimeSeconds int `mapstructure:"grace_time_seconds"`
+}
+
 type Config struct {
-	Server      Server      `mapstructure:"server"`
-	CORS        CORS        `mapstructure:"cors"`
-	RateLimiter RateLimiter `mapstructure:"rate_limiter"`
-	Memcached   Memcached   `mapstructure:"memcached"`
-	Files       Files       `mapstructure:"files"`
-	Metrics     Metrics     `mapstructure:"metrics"`
-	Logging     Logging     `mapstructure:"logging"`
+	Server           Server           `mapstructure:"server"`
+	CORS             CORS             `mapstructure:"cors"`
+	RateLimiter      RateLimiter      `mapstructure:"rate_limiter"`
+	Memcached        Memcached        `mapstructure:"memcached"`
+	Files            Files            `mapstructure:"files"`
+	Metrics          Metrics          `mapstructure:"metrics"`
+	Logging          Logging          `mapstructure:"logging"`
+	GracefulShutdown GracefulShutdown `mapstructure:"graceful_shutdown"`
 }
 
 func Load() (Config, error) {
