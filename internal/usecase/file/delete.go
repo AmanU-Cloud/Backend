@@ -16,6 +16,12 @@ type Cleaner struct {
 	filesDir string
 }
 
+type fileMetadata struct {
+	UUID     string `json:"uuid"`
+	Status   string `json:"status"`
+	Filename string `json:"filename"`
+}
+
 func NewFileCleaner(cache *memecached.Cache) *Cleaner {
 	return &Cleaner{
 		cache:    cache,
@@ -62,12 +68,6 @@ func (fc *Cleaner) DeleteDownloadedFiles(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-type fileMetadata struct {
-	UUID     string `json:"uuid"`
-	Status   string `json:"status"`
-	Filename string `json:"filename"`
 }
 
 func (fc *Cleaner) getFileStatus(ctx context.Context, uuid string) (string, error) {
