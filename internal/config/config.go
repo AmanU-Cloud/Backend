@@ -58,19 +58,14 @@ type Logging struct {
 	Format string `mapstructure:"format"`
 }
 
-type GracefulShutdown struct {
-	GraceTimeSeconds int `mapstructure:"grace_time_seconds"`
-}
-
 type Config struct {
-	Server           Server           `mapstructure:"server"`
-	CORS             CORS             `mapstructure:"cors"`
-	RateLimiter      RateLimiter      `mapstructure:"rate_limiter"`
-	Memcached        Memcached        `mapstructure:"memcached"`
-	Files            Files            `mapstructure:"files"`
-	Metrics          Metrics          `mapstructure:"metrics"`
-	Logging          Logging          `mapstructure:"logging"`
-	GracefulShutdown GracefulShutdown `mapstructure:"graceful_shutdown"`
+	Server      Server      `mapstructure:"server"`
+	CORS        CORS        `mapstructure:"cors"`
+	RateLimiter RateLimiter `mapstructure:"rate_limiter"`
+	Memcached   Memcached   `mapstructure:"memcached"`
+	Files       Files       `mapstructure:"files"`
+	Metrics     Metrics     `mapstructure:"metrics"`
+	Logging     Logging     `mapstructure:"logging"`
 }
 
 func Load() (Config, error) {

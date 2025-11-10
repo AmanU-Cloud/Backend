@@ -56,6 +56,3 @@ logging:
   level: "debug"
   format: "json"
 
-# Graceful shutdown
-graceful_shutdown:
- grace_time_seconds: 30

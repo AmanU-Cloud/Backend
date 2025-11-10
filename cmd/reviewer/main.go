@@ -25,11 +25,14 @@ func main() {
 		return
 	}
 
+	// Базовый контекст
+	ctx := context.Background()
+
 	// Глобальный логер
 	logger.InitGlobalLogger(cfg)
 
 	// Контекст, отменяемый по SIGINT/SIGTERM
-	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	rootCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	// Кэш
@@ -128,8 +131,8 @@ func main() {
 	// Graceful shutdown
 	ready.Store(false)
 
-	graceTime := time.Duration(cfg.GracefulShutdown.GraceTimeSeconds) * time.Second
-	shCtx, cancel := context.WithTimeout(context.Background(), graceTime)
+	graceTime := 30 * time.Second
+	shCtx, cancel := context.WithTimeout(ctx, graceTime)
 	defer cancel()
 
 	if err := srv.Shutdown(shCtx); err != nil {
