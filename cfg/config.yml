@@ -30,7 +30,7 @@ rate_limiter:
 
 # Настройки Memcached
 memcached:
-  enable: false
+  enable: true
   servers:
     - "memcached:11211"
   default_ttl: 300 # 5 минут

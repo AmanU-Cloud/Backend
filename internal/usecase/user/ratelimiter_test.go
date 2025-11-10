@@ -42,11 +42,17 @@ func TestNewRateLimiter(t *testing.T) {
 	mockCache := &MockCache{}
 	rl := NewRateLimiter(mockCache, 60, 60, "memcached", true)
 
-	if rl == nil {
-		t.Error("Expected rate limiter to be created")
-	}
 	if rl.requestsPerMinute != 60 {
 		t.Errorf("Expected 60 requests per minute, got %d", rl.requestsPerMinute)
+	}
+	if rl.bucketSize != 60 {
+		t.Errorf("Expected 60 bucket size, got %d", rl.bucketSize)
+	}
+	if rl.storageType != "memcached" {
+		t.Errorf("Expected storage type 'memcached', got %s", rl.storageType)
+	}
+	if !rl.enabled {
+		t.Error("Expected rate limiter to be enabled")
 	}
 }
 
