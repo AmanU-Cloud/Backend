@@ -93,3 +93,15 @@ func (c *Cache) IsHealthy(ctx context.Context) bool {
 
 	return true
 }
+
+func (c *Cache) Delete(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !c.enable || c.client == nil {
+		return nil
+	}
+
+	prefix := c.prefix + ":" + key
+	return c.client.Delete(prefix)
+}
