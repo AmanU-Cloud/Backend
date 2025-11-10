@@ -30,6 +30,7 @@ type RateLimiter struct {
 	Enabled           bool   `mapstructure:"enabled"`
 	RequestsPerMinute int    `mapstructure:"requests_per_minute"`
 	Storage           string `mapstructure:"storage"`
+	BucketSize        int    `mapstructure:"bucket_size"`
 }
 
 type Memcached struct {

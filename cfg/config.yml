@@ -25,11 +25,12 @@ cors:
 rate_limiter:
   enabled: true
   requests_per_minute: 60
-  storage: "memory"
+  bucket_size: 60
+  storage: "memcached"
 
 # Настройки Memcached
 memcached:
-  enable: true
+  enable: false
   servers:
     - "memcached:11211"
   default_ttl: 300 # 5 минут

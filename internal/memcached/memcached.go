@@ -1,4 +1,4 @@
-package memecached
+package memcached
 
 import (
 	"context"
@@ -19,7 +19,6 @@ type CacheInterface interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Close() error
-	IsHealthy() bool
 }
 
 func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
@@ -77,19 +76,4 @@ func (c *Cache) Set(ctx context.Context, key string, value []byte, ttl time.Dura
 
 func (c *Cache) Close() error {
 	return c.client.Close()
-}
-
-func (c *Cache) IsHealthy(ctx context.Context) bool {
-	if err := ctx.Err(); err != nil {
-		return false
-	}
-	if !c.enable || c.client == nil {
-		return false
-	}
-
-	if err := c.client.Ping(); err != nil {
-		return false
-	}
-
-	return true
 }
