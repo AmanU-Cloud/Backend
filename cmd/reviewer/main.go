@@ -46,14 +46,11 @@ func main() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				if err := fileCleaner.DeleteDownloadedFiles(background); err != nil {
-					slog.Error("file cleaner delete error", "err", err)
-				} else {
-					slog.Info("file cleaner deleted successfully")
-				}
+		for range ticker.C {
+			if err := fileCleaner.DeleteDownloadedFiles(background); err != nil {
+				slog.Error("file cleaner delete error", "err", err)
+			} else {
+				slog.Info("file cleaner deleted successfully")
 			}
 		}
 	}()
