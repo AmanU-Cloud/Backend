@@ -69,21 +69,6 @@ func main() {
 		http.Error(w, "shutting down", http.StatusServiceUnavailable)
 	})
 
-	// Для теста Graceful shutdown. МОЖНО УДАЛЯТЬ
-	mux.HandleFunc("/slow", func(w http.ResponseWriter, r *http.Request) {
-		d := 10 * time.Second
-		if s := r.URL.Query().Get("d"); s != "" {
-			if parsed, err := time.ParseDuration(s); err == nil {
-				d = parsed
-			}
-		}
-		slog.Info("slow begin", "d", d)
-		time.Sleep(d)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("slow ok"))
-		slog.Info("slow end")
-	})
-
 	// Метрики
 	metrics.InitMetricsOn(mux)
 
@@ -92,8 +77,8 @@ func main() {
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   cfg.CORS.AllowedMethods,
 		AllowedHeaders:   cfg.CORS.AllowedHeaders,
-		AllowCredentials: cfg.CORS.AllowCredentials,
-		MaxAgeSeconds:    cfg.CORS.MaxAgeSeconds,
+		AllowCredentials: true,
+		MaxAgeSeconds:    3600,
 	})(mux)
 
 	// HTTP сервер

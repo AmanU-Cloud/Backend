@@ -20,8 +20,6 @@ cors:
     - "X-Timestamp"
     - "X-Request-UUID"
     - "Content-Type"
-  allow_credentials: true
-  max_age_seconds: 3600
 
 # Rate Limiting
 rate_limiter:

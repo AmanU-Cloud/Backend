@@ -21,11 +21,11 @@ func (s Server) ReadTimeout() time.Duration  { return time.Duration(s.ReadTimeou
 func (s Server) WriteTimeout() time.Duration { return time.Duration(s.WriteTimeoutSec) * time.Second }
 
 type CORS struct {
-	AllowedOrigins   []string `mapstructure:"allowed_origins"`
-	AllowedMethods   []string `mapstructure:"allowed_methods"`
-	AllowedHeaders   []string `mapstructure:"allowed_headers"`
-	AllowCredentials bool     `mapstructure:"allow_credentials"`
-	MaxAgeSeconds    int      `mapstructure:"max_age_seconds"`
+	AllowedOrigins []string `mapstructure:"allowed_origins"`
+	AllowedMethods []string `mapstructure:"allowed_methods"`
+	AllowedHeaders []string `mapstructure:"allowed_headers"`
+	//AllowCredentials bool     `mapstructure:"allow_credentials"`
+	//MaxAgeSeconds    int      `mapstructure:"max_age_seconds"`
 }
 
 type RateLimiter struct {
