@@ -51,11 +51,11 @@ func CORS(cfg CORSConfig) func(http.Handler) http.Handler {
 }
 
 type RateLimiterMiddleware struct {
-	rateLimiter user.RateLimiterInterface
+	rateLimiter user.RateLimiter
 	config      *config.Config
 }
 
-func NewRateLimiterMiddleware(rateLimiter user.RateLimiterInterface, cfg *config.Config) *RateLimiterMiddleware {
+func NewRateLimiterMiddleware(rateLimiter user.RateLimiter, cfg *config.Config) *RateLimiterMiddleware {
 	return &RateLimiterMiddleware{
 		rateLimiter: rateLimiter,
 		config:      cfg,
@@ -74,7 +74,7 @@ func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
 		clientIP := getClientIP(r)
 
 		// Проверяем rate limit
-		result, err := m.rateLimiter.AllowRequest(r.Context(), clientIP)
+		err := m.rateLimiter.AllowRequest(r.Context(), clientIP)
 		if err != nil {
 			// При ошибке разрешаем запрос (fail open strategy)
 			slog.Warn("Rate limiter error, allowing request", "error", err, "ip", clientIP)
@@ -82,18 +82,8 @@ func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// Логируем ошибки из RateLimitResult
-		if result.Error != nil {
-			if errors.Is(result.Error, user.ErrRateLimitExceeded) {
-				slog.Info("Rate limit exceeded", "ip", clientIP, "remaining", result.Remaining)
-			} else {
-				slog.Warn("Rate limiter internal error", "error", result.Error, "ip", clientIP)
-			}
-		}
-
 		if !result.Allowed {
 			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(m.config.RateLimiter.RequestsPerMinute))
-			w.Header().Set("X-RateLimit-Remaining", "0")
 			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(result.RetryAfter).Unix(), 10))
 			w.Header().Set("Retry-After", strconv.FormatFloat(result.RetryAfter.Seconds(), 'f', 0, 64))
 
