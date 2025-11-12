@@ -1,0 +1,103 @@
+### Тестовые запросы для API Reviewer
+
+### 1. Upload - загрузка одного файла (минимум 2 файла для пары)
+POST http://localhost:8080/upload
+X-Operation-Key: op-test-12345-abcde-67890
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="example.pdf"
+Content-Type: application/pdf
+
+< ./example.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="test_file.pdf"
+Content-Type: application/pdf
+
+< ./example2.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 2. Upload - загрузка пары файлов (до и после для одного ребенка)
+POST http://localhost:8080/upload
+X-Operation-Key: op-test-pair-001
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="child1_before.pdf"
+Content-Type: application/pdf
+
+< ./example.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="child1_after.pdf"
+Content-Type: application/pdf
+
+< ./example2.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 3. Get - получение статуса операции (замените {operation_id} на реальный ID из ответа upload)
+GET http://localhost:8080/get?id=550e8400-e29b-41d4-a716-446655440000
+Accept: application/json
+
+###
+
+### 4. Get - получение статуса операции (пример с UUID)
+GET http://localhost:8080/get?id={{operation_id}}
+Accept: application/json
+
+###
+
+### 5. Ping - проверка работы сервера
+GET http://localhost:8080/ping
+
+###
+
+### 6. Upload - тест с дубликатом ключа (должен вернуть 409)
+POST http://localhost:8080/upload
+X-Operation-Key: op-test-duplicate-key
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="example.pdf"
+Content-Type: application/pdf
+
+< ./example.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="test_file.pdf"
+Content-Type: application/pdf
+
+< ./example2.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 7. Upload - тест без заголовка X-Operation-Key (должен вернуть 400)
+POST http://localhost:8080/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="example.pdf"
+Content-Type: application/pdf
+
+< ./example.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### 8. Upload - тест с нечетным количеством файлов (должен вернуть 400)
+POST http://localhost:8080/upload
+X-Operation-Key: op-test-odd-files
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="example.pdf"
+Content-Type: application/pdf
+
+< ./example.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+

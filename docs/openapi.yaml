@@ -1,0 +1,745 @@
+openapi: 3.0.0
+info:
+  title: PDF Comparison Service
+  version: 2.0.0
+  description: Асинхронный сервис обработки и сравнения PDF-файлов с извлечением всех полей и метрик коммуникативного развития
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Operations
+    description: Операции с загрузкой и получением результатов
+
+paths:
+  /upload:
+    post:
+      tags:
+        - Operations
+      summary: Загрузка PDF-файлов для сравнения
+      description: |
+        Загружает пары PDF-файлов ("до" и "после") для каждого ребенка.
+        Максимум 20 файлов за один запрос (10 пар = 10 детей).
+        Каждая пара файлов должна содержать данные одного ребенка на момент времени "до" и "после".
+      
+      parameters:
+        - in: header
+          name: X-Operation-Key
+          schema:
+            type: string
+          required: true
+          description: Уникальный ключ идемпотентности для операции
+          example: "op-12345-abcde-67890"
+      
+      requestBody:
+        required: true
+        content:
+          multipart/form-
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  minItems: 2
+                  maxItems: 20
+                  items:
+                    type: string
+                    format: binary
+                  description: |
+                    Массив PDF-файлов. Должно быть четное количество файлов.
+                    Порядок: [ребенок1_до, ребенок1_после, ребенок2_до, ребенок2_после, ...]
+            encoding:
+              files:
+                contentType: application/pdf
+      
+      responses:
+        '200':
+          description: Файлы успешно приняты, операция создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+              example:
+                operation_id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "NEW"
+                pairs_count: 10
+                message: "10 pairs of files accepted for processing"
+        
+        '400':
+          description: Ошибка валидации запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missing_key:
+                  summary: Отсутствует ключ идемпотентности
+                  value:
+                    error: "X-Operation-Key header is required"
+                    code: "MISSING_OPERATION_KEY"
+                invalid_file_count:
+                  summary: Неверное количество файлов
+                  value:
+                    error: "Files count must be even (pairs of before/after). Got 5 files"
+                    code: "INVALID_FILE_COUNT"
+                too_many_files:
+                  summary: Превышен лимит файлов
+                  value:
+                    error: "Maximum 20 files allowed per request. Got 25 files"
+                    code: "FILE_LIMIT_EXCEEDED"
+        
+        '409':
+          description: Ключ идемпотентности уже использовался
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuplicateOperationError'
+              example:
+                error: "Operation with this key already exists"
+                code: "DUPLICATE_OPERATION_KEY"
+                existing_operation_id: "550e8400-e29b-41d4-a716-446655440000"
+        
+        '429':
+          description: Превышен лимит запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded. Try again in 30 seconds"
+                code: "RATE_LIMIT_EXCEEDED"
+                retry_after: 30
+        
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /get:
+    get:
+      tags:
+        - Operations
+      summary: Получение результатов сравнения с полными данными из PDF
+      description: |
+        Возвращает результаты обработки и сравнения PDF-файлов с полной информацией 
+        о детях и их метриках коммуникативного развития.
+        
+        Если обработка еще не завершена, возвращает статус PROGRESS с информацией о ходе.
+      
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Идентификатор операции
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      
+      responses:
+        '200':
+          description: Результаты обработки (в любом статусе)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/OperationInProgress'
+                  - $ref: '#/components/schemas/OperationComplete'
+                  - $ref: '#/components/schemas/OperationError'
+              examples:
+                in_progress:
+                  summary: Обработка в процессе
+                  value:
+                    operation_id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "PROGRESS"
+                    progress:
+                      processed: 5
+                      total: 10
+                    estimated_completion_seconds: 30
+                
+                complete:
+                  summary: Обработка завершена успешно
+                  value:
+                    operation_id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "DONE"
+                    results:
+                      - child_id: "123"
+                        before:
+                          portrait:
+                            child_name: "тест"
+                            parent_name: "иванов иван"
+                            diagnosis: "PAC"
+                        after:
+                          portrait:
+                            child_name: "тест"
+                            parent_name: "иванов иван"
+                            diagnosis: "PAC"
+                        changes:
+                          language_improvements:
+                            dointencional_communication_change: 5
+                
+                error:
+                  summary: Ошибка обработки
+                  value:
+                    operation_id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "ERROR"
+                    error: "Failed to parse PDF file: corrupted document"
+                    failed_files:
+                      - "file_3_before.pdf"
+        
+        '404':
+          description: Операция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Operation not found"
+                code: "OPERATION_NOT_FOUND"
+        
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    # Базовые типы ответов
+    
+    UploadResponse:
+      type: object
+      required:
+        - operation_id
+        - status
+        - pairs_count
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор операции
+        status:
+          type: string
+          enum: [NEW]
+          description: Начальный статус операции
+        pairs_count:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Количество пар документов на обработку
+        message:
+          type: string
+          description: Информационное сообщение
+
+    OperationInProgress:
+      type: object
+      required:
+        - operation_id
+        - status
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [NEW, PROGRESS]
+        progress:
+          type: object
+          properties:
+            processed:
+              type: integer
+              description: Количество обработанных пар
+            total:
+              type: integer
+              description: Общее количество пар
+        estimated_completion_seconds:
+          type: integer
+          description: Примерное время до завершения в секундах
+
+    OperationComplete:
+      type: object
+      required:
+        - operation_id
+        - status
+        - results
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DONE]
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChildComparison'
+
+    OperationError:
+      type: object
+      required:
+        - operation_id
+        - status
+        - error
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ERROR]
+        error:
+          type: string
+          description: Описание ошибки
+        error_code:
+          type: string
+          description: Код ошибки
+        failed_files:
+          type: array
+          items:
+            type: string
+          description: Список файлов, которые не удалось обработать
+
+    Error:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+        code:
+          type: string
+          description: Код ошибки
+        details:
+          type: object
+          description: Дополнительная информация об ошибке
+          additionalProperties: true
+
+    DuplicateOperationError:
+      type: object
+      required:
+        - error
+        - code
+        - existing_operation_id
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        existing_operation_id:
+          type: string
+          format: uuid
+
+    # Основные данные
+
+    ChildComparison:
+      type: object
+      required:
+        - child_id
+        - before
+        - after
+      properties:
+        child_id:
+          type: string
+          description: Идентификатор ребенка из PDF
+          example: "123"
+        before:
+          $ref: '#/components/schemas/ChildProfile'
+        after:
+          $ref: '#/components/schemas/ChildProfile'
+        changes:
+          $ref: '#/components/schemas/ChangesAnalysis'
+
+    ChildProfile:
+      type: object
+      properties:
+        portrait:
+          $ref: '#/components/schemas/Portrait'
+        basic_assessment:
+          $ref: '#/components/schemas/BasicAssessment'
+        language_assessment:
+          $ref: '#/components/schemas/LanguageAssessment'
+        communication_functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunicationFunction'
+        aac_usage:
+          $ref: '#/components/schemas/AACUsage'
+        vocabulary:
+          $ref: '#/components/schemas/Vocabulary'
+        interests_and_barriers:
+          $ref: '#/components/schemas/InterestsAndBarriers'
+        communication_circles:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunicationCircle'
+
+    # ПОРТРЕТ ПОЛЬЗОВАТЕЛЯ
+
+    Portrait:
+      type: object
+      properties:
+        child_name:
+          type: string
+          description: Имя обследуемого
+          example: "тест"
+        parent_name:
+          type: string
+          description: ФИ родителя/опекуна
+          example: "иванов иван"
+        date_filled:
+          type: string
+          format: date
+          description: Дата заполнения анкеты
+          example: "2025-10-01"
+        date_of_birth:
+          type: string
+          format: date
+          description: Дата рождения ребенка
+          example: "2020-07-08"
+        diagnosis:
+          type: string
+          description: Диагноз
+          example: "PAC"
+        social_situation:
+          type: string
+          description: Особенности социальной ситуации
+          example: "полная семья, есть старшая сестра"
+        place_of_residence:
+          type: string
+          description: Где проживает человек
+          example: "В семье"
+
+    # БАЗОВАЯ ОЦЕНКА
+
+    BasicAssessment:
+      type: object
+      properties:
+        verbal_speech:
+          type: object
+          description: Особенности вербальной речи
+          properties:
+            main_feature:
+              type: string
+              example: "Вокализирует"
+            additional_notes:
+              type: array
+              items:
+                type: string
+        written_speech:
+          type: object
+          description: Особенности письменной речи
+          properties:
+            status:
+              type: string
+        vision:
+          type: object
+          description: Особенности зрения
+          properties:
+            general_status:
+              type: string
+              example: "Зрение в пределах нормы"
+            specific_issues:
+              type: array
+              items:
+                type: string
+              example: ["астигматизм"]
+            capabilities:
+              type: array
+              items:
+                type: string
+              example: ["Видит и различает двухмерное изображение без дополнительной поддержки", "Видит и различает объемные предметы"]
+        hearing:
+          type: object
+          description: Особенности слуха
+          properties:
+            general_status:
+              type: string
+              example: "Слух в пределах нормы"
+            additional_notes:
+              type: array
+              items:
+                type: string
+        understanding_speech:
+          type: object
+          description: Особенности понимания обращенной речи
+          properties:
+            capabilities:
+              type: array
+              items:
+                type: string
+                enum: ["Отдельные слова", "Простая инструкция", "Вопросы с выбором", "Понимает фразы", "Открытые вопросы", "Закрытые вопросы"]
+        motor_skills:
+          type: object
+          description: Особенности моторной сферы
+          properties:
+            description:
+              type: string
+              example: "движения достаточны для общения"
+            pointing_methods:
+              type: array
+              items:
+                type: string
+              example: ["Пальцем (точное указание)", "Всей рукой (ладонью, кулаком, несколькими пальцами)"]
+
+    # ЯЗЫКОВАЯ И КОММУНИКАТИВНАЯ ОЦЕНКА
+
+    LanguageAssessment:
+      type: object
+      properties:
+        language_level_application:
+          type: object
+          description: Уровень применения языковых навыков (%)
+          properties:
+            dointencional_communication:
+              type: integer
+              minimum: 0
+              maximum: 100
+            protolanguage:
+              type: integer
+              minimum: 0
+              maximum: 100
+            holoprasis:
+              type: integer
+              minimum: 0
+              maximum: 100
+            phrase:
+              type: integer
+              minimum: 0
+              maximum: 100
+        initiative:
+          type: object
+          description: Инициатива по уровням
+          properties:
+            level_1:
+              type: integer
+              minimum: 0
+              maximum: 100
+            level_2:
+              type: integer
+              minimum: 0
+              maximum: 100
+            level_3:
+              type: integer
+              minimum: 0
+              maximum: 100
+        communication_functions_summary:
+          type: object
+          description: Сводка по коммуникативным функциям (%)
+          properties:
+            refusal_rejection:
+              type: integer
+              minimum: 0
+              maximum: 100
+            obtaining_desired:
+              type: integer
+              minimum: 0
+              maximum: 100
+            social_interaction:
+              type: integer
+              minimum: 0
+              maximum: 100
+            information_exchange:
+              type: integer
+              minimum: 0
+              maximum: 100
+
+    # КОММУНИКАТИВНЫЕ ФУНКЦИИ
+
+    CommunicationFunction:
+      type: object
+      properties:
+        function_name:
+          type: string
+          description: Название коммуникативной функции
+          enum: 
+            - "ОТКАЗЫВАЕТСЯ, ОТКЛОНЯЕТ"
+            - "ПОЛУЧЕНИЕ ЖЕЛАЕМОГО"
+            - "СОЦИАЛЬНОЕ ВЗАИМОДЕЙСТВИЕ"
+            - "ОБМЕН ИНФОРМАЦИЕЙ"
+        table_
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunicationFunctionEntry'
+
+    CommunicationFunctionEntry:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: ["протоязык", "голофраза", "фраза"]
+          description: Уровень речевого развития
+        formed_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Процент сформированности
+        initiative_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Процент инициативы
+        frequency_category:
+          type: string
+          enum: ["Регулярно", "Нерегулярно", "Редко"]
+          description: Категория частоты
+        frequency_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Процент от основной категории
+
+    # ИСПОЛЬЗОВАНИЕ АДК
+
+    AACUsage:
+      type: object
+      description: Использование альтернативной и аугментативной коммуникации (АДК)
+      properties:
+        aac_tools:
+          type: array
+          items:
+            type: string
+          description: Используемые вспомогательные средства
+          example: ["Отдельные символы", "Коммуникативная доска", "Коммуникативная книга"]
+        support_level:
+          type: string
+          description: Степень поддержки при использовании
+          example: "Средняя"
+        access_method:
+          type: string
+          description: Способ доступа к средству
+          example: "Прямое прикосновение"
+        smartphone_tablet_interaction:
+          type: string
+          description: Взаимодействие со смартфоном/планшетом
+          example: "Использует активно"
+
+    # СЛОВАРНЫЙ ЗАПАС
+
+    Vocabulary:
+      type: object
+      properties:
+        base_vocabulary:
+          type: array
+          items:
+            type: string
+          description: Базовый словарь ребенка
+          example: ["мама", "папа", "хочу", "да", "нет"]
+        custom_words:
+          type: array
+          items:
+            type: string
+          description: Слова вне стандартного словаря
+          example: ["пап-пап", "ба-ба"]
+        total_words:
+          type: integer
+          description: Общее количество слов в словаре
+          example: 45
+
+    # ИНТЕРЕСЫ И БАРЬЕРЫ
+
+    InterestsAndBarriers:
+      type: object
+      properties:
+        preferred_activities:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+          description: Активности которые нравятся ребенку
+          example: ["Игры с водой", "Музыка", "Прогулки", "Рисование", "Игры с животными"]
+        uncomfortable_activities:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+          description: Активности которые вызывают дискомфорт
+          example: ["Стрижка волос", "Купание", "Громкие звуки", "Переодевание", "Смена режима"]
+
+    # КРУГИ ОБЩЕНИЯ
+
+    CommunicationCircle:
+      type: object
+      properties:
+        contact_type:
+          type: string
+          description: Тип контакта
+          enum: ["Мама", "Папа", "Брат/сестра", "Друзья", "Знакомые", "Специалисты", "Другое"]
+        communication_style:
+          type: string
+          description: Стиль общения
+          example: "Активный"
+        signal_response:
+          type: string
+          description: Информация о реакции ребенка на сигналы этого контакта
+          example: "Хорошо понимает голос"
+        dialogue_support:
+          type: string
+          description: Способность ребенка поддерживать диалог с этим контактом
+          example: "Инициирует общение"
+
+    # АНАЛИЗ ИЗМЕНЕНИЙ
+
+    ChangesAnalysis:
+      type: object
+      description: Анализ изменений между профилями "до" и "после"
+      properties:
+        language_improvements:
+          type: object
+          description: Изменения по уровням языкового развития (в процентах)
+          properties:
+            dointencional_communication_change:
+              type: integer
+              example: 5
+            protolanguage_change:
+              type: integer
+              example: 10
+            holoprasis_change:
+              type: integer
+              example: -2
+            phrase_change:
+              type: integer
+              example: 8
+        communication_function_changes:
+          type: object
+          description: Изменения по коммуникативным функциям (%)
+          additionalProperties:
+            type: integer
+          example:
+            refusal_rejection: 3
+            obtaining_desired: 7
+            social_interaction: 5
+            information_exchange: 2
+        new_vocabulary_words:
+          type: array
+          items:
+            type: string
+          description: Новые слова добавленные в словарь за период
+          example: ["кот", "мяч", "хлеб"]
+        lost_vocabulary_words:
+          type: array
+          items:
+            type: string
+          description: Слова которые были удалены из словаря
+          example: []
+        improved_skills:
+          type: array
+          items:
+            type: string
+          description: Описание улучшенных коммуникативных навыков
+          example: ["Лучше инициирует общение", "Расширен словарный запас", "Улучшена инициатива при социальном взаимодействии"]
+        areas_for_improvement:
+          type: array
+          items:
+            type: string
+          description: Области, требующие дополнительной работы
+          example: ["Письменная речь", "Понимание сложных фраз"]

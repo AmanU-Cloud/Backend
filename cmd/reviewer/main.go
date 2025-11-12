@@ -44,6 +44,11 @@ func main() {
 		_, _ = w.Write([]byte("pong"))
 	})
 
+	hndlr := handler.NewHandler(cfg, cache)
+
+	mux.HandleFunc("/upload", hndlr.UploadHandler)
+	mux.HandleFunc("/get", hndlr.GetHandler)
+
 	h := handler.CORS(handler.CORSConfig{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   cfg.CORS.AllowedMethods,

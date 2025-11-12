@@ -19,7 +19,7 @@ type CacheInterface interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Close() error
-	IsHealthy() bool
+	IsHealthy(ctx context.Context) bool
 }
 
 func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
