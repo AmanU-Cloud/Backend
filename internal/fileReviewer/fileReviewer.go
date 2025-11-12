@@ -63,7 +63,7 @@ func worker(wg *sync.WaitGroup) {
 	data2 := fetchUserDataFromCache(key2)
 
 	// Сравниваем полученные данные
-	result := compareUserData(data1, data2)
+	result := TODO(data1, data2)
 
 	// Отправляем результат на фронтенд
 	err := sendResponse(result)
@@ -109,7 +109,7 @@ func fetchUserDataFromCache(key string) *UserData {
 }
 
 // Метод сравнения данных пользователей, просто чтобы прикинуть принцип работы
-func compareUserData(user1, user2 *UserData) map[string]interface{} {
+func TODO(user1, user2 *UserData) map[string]interface{} {
 	comparisonResult := make(map[string]interface{})
 
 	if user1.Name == user2.Name {
