@@ -23,7 +23,7 @@ type UserData struct {
 // Глобальная переменная логгера
 var GlobalLogger *logger.Logger
 
-// Начнём обработку
+// Имитация бурной деятельности
 func StartProcessing() {
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -51,22 +51,29 @@ func StartProcessing() {
 // Рабочая горутина
 func worker(wg *sync.WaitGroup) {
 	defer wg.Done()
-	for key := range bufferCh {
-		// Берём файлы из Memcached (фиктивная реализация)
-		data1, data2 := fetchUserDataFromCache(key)
 
-		// Проверяем имена пользователей и сравниваем остальные поля
-		result := compareUserData(data1, data2)
+	// Читаем два ключа из канала
+	key1 := <-bufferCh
+	key2 := <-bufferCh
 
-		// Отправляем результат на фронтенд
-		err := sendResponse(result)
-		if err != nil {
-			GlobalLogger.Error("Ошибка отправки:", "key", key, "err", err)
-		}
+	// Получаем данные по первому ключу
+	data1 := fetchUserDataFromCache(key1)
 
-		// Сообщение об необходимости удаления файла
-		cleanUpCh <- key
+	// Получаем данные по второму ключу
+	data2 := fetchUserDataFromCache(key2)
+
+	// Сравниваем полученные данные
+	result := compareUserData(data1, data2)
+
+	// Отправляем результат на фронтенд
+	err := sendResponse(result)
+	if err != nil {
+		GlobalLogger.Error("Ошибка отправки:", "err", err)
 	}
+
+	// Сообщаем о необходимости удаления обоих файлов
+	cleanUpCh <- key1
+	cleanUpCh <- key2
 }
 
 // Горутина для очистки данных
@@ -79,19 +86,26 @@ func cleanupWorker(wg *sync.WaitGroup) {
 }
 
 // Заглушка получения данных пользователя из кэша
-func fetchUserDataFromCache(key string) (*UserData, *UserData) {
-	return &UserData{
-			Name:     "Иван",
+func fetchUserDataFromCache(key string) *UserData {
+	switch key {
+	case "randomkey1":
+		return &UserData{
+			Name:     "Иван Иванов",
 			Age:      30,
 			Keywords: []string{"hello", "world"},
 			Value:    42.0,
-		},
-		&UserData{
-			Name:     "Иван",
+		}
+	case "randomkey2":
+		return &UserData{
+			Name:     "Иван Иванов",
 			Age:      31,
 			Keywords: []string{"goodbye", "universe"},
 			Value:    43.0,
 		}
+	default:
+		GlobalLogger.Warn("Неизвестный ключ:", "key", key)
+		return nil
+	}
 }
 
 // Метод сравнения данных пользователей, просто чтобы прикинуть принцип работы
