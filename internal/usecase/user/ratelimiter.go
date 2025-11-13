@@ -3,43 +3,48 @@ package user
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
+	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/memcached"
-	"golang.org/x/sys/windows"
 )
 
-var (
-	ErrRateLimitExceeded = errors.New("too many requests per minute")
-)
+var ErrRateLimitExceeded = errors.New("too many requests")
 
 type RateLimiter struct {
-	cache             memcached.CacheInterface
-	requestsPerMinute int
-	window            time.Duration
-	enabled           bool
+	cache    memcached.CacheInterface
+	enabled  bool
+	window   time.Duration
+	requests int
 }
 
-func NewRateLimiter(cache memcached.CacheInterface, requestsPerMinute int, window time.Duration, enabled bool) *RateLimiter {
+func NewRateLimiter(cache memcached.CacheInterface, cfg config.Config) *RateLimiter {
 	return &RateLimiter{
-		cache:             cache,
-		requestsPerMinute: requestsPerMinute,
-		window:            window,
-		enabled:           enabled,
+		cache:    cache,
+		enabled:  cfg.RateLimiter.Enabled,
+		window:   time.Duration(cfg.RateLimiter.WindowSize) * time.Second,
+		requests: cfg.RateLimiter.RequestsPerWindow,
 	}
 }
 
-func (rl *RateLimiter) AllowRequest(ctx context.Context, identifier string) error {
-	key := "rate_limit_" + identifier
+func (rl *RateLimiter) AllowRequest(ctx context.Context, userID string) error {
 	if !rl.enabled {
 		return nil
 	}
-	get, err := rl.cache.Get(ctx, key)
-	if get == nil {
-		return nil
+
+	key := "rate_limit:" + userID
+
+	_, err := rl.cache.Get(ctx, key)
+	if err == nil {
+		return ErrRateLimitExceeded
 	}
+
+	err = rl.cache.Set(ctx, key, []byte("1"), rl.window)
 	if err != nil {
+		slog.Info("Rate limit check", "error", err, "key", key)
 		return nil
 	}
+
 	return nil
 }

@@ -28,9 +28,9 @@ type CORS struct {
 
 type RateLimiter struct {
 	Enabled           bool   `mapstructure:"enabled"`
-	RequestsPerMinute int    `mapstructure:"requests_per_minute"`
+	RequestsPerWindow int    `mapstructure:"requests_per_window"`
 	Storage           string `mapstructure:"storage"`
-	BucketSize        int    `mapstructure:"bucket_size"`
+	WindowSize        int    `mapstructure:"window_size"`
 }
 
 type Memcached struct {

@@ -21,8 +21,8 @@ func main() {
 		return
 	}
 
-	background := context.Background()
-	cache, err := memcached.NewCache(background, cfg)
+	ctx := context.Background()
+	cache, err := memcached.NewCache(ctx, cfg)
 	if err != nil {
 		slog.Error("cache initialization failed", "err", err)
 		return
@@ -34,15 +34,9 @@ func main() {
 		}
 	}(cache)
 
-	rateLimiter := user.NewRateLimiter(
-		cache,
-		cfg.RateLimiter.RequestsPerMinute,
-		cfg.RateLimiter.BucketSize,
-		cfg.RateLimiter.Storage,
-		cfg.RateLimiter.Enabled,
-	)
+	rateLimiter := user.NewRateLimiter(cache, cfg)
 
-	rateLimitMiddleware := handler.NewRateLimiterMiddleware(rateLimiter, &cfg)
+	rateLimitMiddleware := handler.NewRateLimiterMiddleware(rateLimiter)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {

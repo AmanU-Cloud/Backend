@@ -1,15 +1,10 @@
 package handler
 
 import (
-	"errors"
-	"log/slog"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/Caritas-Team/reviewer/internal/config"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"github.com/rs/cors"
 )
@@ -51,74 +46,36 @@ func CORS(cfg CORSConfig) func(http.Handler) http.Handler {
 }
 
 type RateLimiterMiddleware struct {
-	rateLimiter user.RateLimiter
-	config      *config.Config
+	limiter *user.RateLimiter
 }
 
-func NewRateLimiterMiddleware(rateLimiter user.RateLimiter, cfg *config.Config) *RateLimiterMiddleware {
+func NewRateLimiterMiddleware(limiter *user.RateLimiter) *RateLimiterMiddleware {
 	return &RateLimiterMiddleware{
-		rateLimiter: rateLimiter,
-		config:      cfg,
+		limiter: limiter,
 	}
 }
 
 func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Пропускаем OPTIONS запросы (для CORS preflight)
-		if r.Method == "OPTIONS" {
-			next.ServeHTTP(w, r)
-			return
+		ip := r.RemoteAddr
+
+		if host, _, err := net.SplitHostPort(ip); err == nil {
+			ip = host
 		}
 
-		// Получаем IP адрес клиента
-		clientIP := getClientIP(r)
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			ips := strings.Split(forwarded, ",")
+			if len(ips) > 0 {
+				ip = strings.TrimSpace(ips[0])
+			}
+		}
 
-		// Проверяем rate limit
-		err := m.rateLimiter.AllowRequest(r.Context(), clientIP)
+		err := m.limiter.AllowRequest(r.Context(), ip)
 		if err != nil {
-			// При ошибке разрешаем запрос (fail open strategy)
-			slog.Warn("Rate limiter error, allowing request", "error", err, "ip", clientIP)
-			next.ServeHTTP(w, r)
+			http.Error(w, "Too many requests", http.StatusTooManyRequests)
 			return
 		}
-
-		if !result.Allowed {
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(m.config.RateLimiter.RequestsPerMinute))
-			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(result.RetryAfter).Unix(), 10))
-			w.Header().Set("Retry-After", strconv.FormatFloat(result.RetryAfter.Seconds(), 'f', 0, 64))
-
-			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-			return
-		}
-
-		// Устанавливаем headers с информацией о rate limit
-		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(m.config.RateLimiter.RequestsPerMinute))
-		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-// Вспомогательная функция для получения реального IP
-func getClientIP(r *http.Request) string {
-	// Проверяем X-Forwarded-For для случаев за proxy
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		ips := strings.Split(forwarded, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
-	}
-
-	// Проверяем X-Real-IP
-	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
-		return realIP
-	}
-
-	// Берем RemoteAddr
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-
-	return host
 }

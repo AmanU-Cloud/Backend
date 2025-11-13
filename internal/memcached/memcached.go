@@ -8,6 +8,8 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
+var ErrCacheMiss = memcache.ErrCacheMiss
+
 type Cache struct {
 	client *memcache.Client
 	ttl    time.Duration
