@@ -123,7 +123,7 @@ func TestRateLimiter_CacheError(t *testing.T) {
 	ctx := context.Background()
 
 	// Мок который всегда падает
-	brokenCache := newBrokenCache() // ← ИСПОЛЬЗУЕМ НОВЫЙ КОНСТРУКТОР
+	brokenCache := newBrokenCache()
 
 	cfg := config.Config{
 		RateLimiter: config.RateLimiter{
