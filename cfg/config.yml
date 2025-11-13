@@ -24,15 +24,16 @@ cors:
 # Rate Limiting
 rate_limiter:
   enabled: true
-  requests_per_minute: 60
-  storage: "memory"
+  requests_per_window: 1
+  window_size: 30 # секунд
+  storage: "memcached"
 
 # Настройки Memcached
 memcached:
   enable: true
   servers:
     - "memcached:11211"
-  default_ttl: 300 # 5 минут
+  default_ttl: 3600 # 1 час (из ТЗ)
   key_prefix: "pdf_api"
 
 # Обработка файлов

@@ -1,0 +1,141 @@
+package user
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/Caritas-Team/reviewer/internal/config"
+	"github.com/bradfitz/gomemcache/memcache"
+)
+
+// Мок для memcached
+type mockCache struct {
+	storage    map[string][]byte
+	alwaysFail bool
+}
+
+func newMockCache() *mockCache {
+	return &mockCache{
+		storage: make(map[string][]byte),
+	}
+}
+
+func newBrokenCache() *mockCache {
+	return &mockCache{
+		storage:    make(map[string][]byte),
+		alwaysFail: true,
+	}
+}
+
+func (m *mockCache) Get(ctx context.Context, key string) ([]byte, error) {
+	if m.alwaysFail {
+		return nil, errors.New("cache broken")
+	}
+
+	value, exists := m.storage[key]
+	if !exists {
+		return nil, memcache.ErrCacheMiss
+	}
+	return value, nil
+}
+
+func (m *mockCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+
+	m.storage[key] = value
+	return nil
+}
+
+func (m *mockCache) Close() error {
+	return nil
+}
+
+func TestRateLimiter_AllowRequest(t *testing.T) {
+	ctx := context.Background()
+	mockCache := newMockCache()
+
+	cfg := config.Config{
+		RateLimiter: config.RateLimiter{
+			Enabled:           true,
+			RequestsPerWindow: 1,
+			WindowSize:        30,
+			Storage:           "memcached",
+		},
+	}
+
+	limiter := NewRateLimiter(mockCache, cfg)
+
+	t.Run("первый запрос разрешен", func(t *testing.T) {
+		err := limiter.AllowRequest(ctx, "user1")
+		if err != nil {
+			t.Errorf("ожидался nil, получил %v", err)
+		}
+	})
+
+	t.Run("второй запрос запрещен", func(t *testing.T) {
+		err := limiter.AllowRequest(ctx, "user1")
+		if !errors.Is(err, ErrRateLimitExceeded) {
+			t.Errorf("ожидалась ошибка лимита, получил %v", err)
+		}
+	})
+
+	t.Run("разные пользователи - разные лимиты", func(t *testing.T) {
+		// user1 все еще заблокирован
+		err := limiter.AllowRequest(ctx, "user1")
+		if !errors.Is(err, ErrRateLimitExceeded) {
+			t.Errorf("user1 должен быть заблокирован")
+		}
+
+		// user2 может сделать запрос
+		err = limiter.AllowRequest(ctx, "user2")
+		if err != nil {
+			t.Errorf("user2 должен быть разрешен")
+		}
+	})
+}
+
+func TestRateLimiter_Disabled(t *testing.T) {
+	ctx := context.Background()
+	mockCache := newMockCache()
+
+	cfg := config.Config{
+		RateLimiter: config.RateLimiter{
+			Enabled: false,
+		},
+	}
+
+	limiter := NewRateLimiter(mockCache, cfg)
+
+	// Даже много запросов должны проходить
+	for i := 0; i < 10; i++ {
+		err := limiter.AllowRequest(ctx, "user1")
+		if err != nil {
+			t.Errorf("при выключенном лимитере ошибок быть не должно")
+		}
+	}
+}
+
+func TestRateLimiter_CacheError(t *testing.T) {
+	ctx := context.Background()
+
+	// Мок который всегда падает
+	brokenCache := newBrokenCache()
+
+	cfg := config.Config{
+		RateLimiter: config.RateLimiter{
+			Enabled: true,
+		},
+	}
+
+	limiter := NewRateLimiter(brokenCache, cfg)
+
+	// При ошибках кэша должны разрешать запрос (fail open)
+	err := limiter.AllowRequest(ctx, "user1")
+	if err != nil {
+		t.Errorf("при ошибках кэша должен разрешать запрос")
+	}
+}

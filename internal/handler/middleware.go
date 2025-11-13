@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"net"
 	"net/http"
+	"strings"
 
+	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"github.com/rs/cors"
 )
 
@@ -40,4 +43,39 @@ func CORS(cfg CORSConfig) func(http.Handler) http.Handler {
 		MaxAge:           cfg.MaxAgeSeconds,
 	})
 	return func(next http.Handler) http.Handler { return c.Handler(next) }
+}
+
+type RateLimiterMiddleware struct {
+	limiter *user.RateLimiter
+}
+
+func NewRateLimiterMiddleware(limiter *user.RateLimiter) *RateLimiterMiddleware {
+	return &RateLimiterMiddleware{
+		limiter: limiter,
+	}
+}
+
+func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := r.RemoteAddr
+
+		if host, _, err := net.SplitHostPort(ip); err == nil {
+			ip = host
+		}
+
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			ips := strings.Split(forwarded, ",")
+			if len(ips) > 0 {
+				ip = strings.TrimSpace(ips[0])
+			}
+		}
+
+		err := m.limiter.AllowRequest(r.Context(), ip)
+		if err != nil {
+			http.Error(w, "Too many requests", http.StatusTooManyRequests)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
