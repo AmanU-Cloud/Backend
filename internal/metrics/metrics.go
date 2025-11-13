@@ -9,10 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const namespace = "pdf_service" // можно в cfg вынести
-
-// // startAt - время старта процесса
-// var startAt time.Time = time.Now()
+const namespace = "pdf_service"
 
 // once — чтобы безопасно навесить метрики один раз
 var once sync.Once
