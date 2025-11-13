@@ -26,7 +26,6 @@ func CORS(cfg CORSConfig) func(http.Handler) http.Handler {
 	if len(cfg.AllowedHeaders) == 0 {
 		cfg.AllowedHeaders = DefaultCORSHeaders
 	}
-
 	if len(cfg.AllowedOrigins) == 0 {
 		c := cors.AllowAll()
 		return func(next http.Handler) http.Handler { return c.Handler(next) }
