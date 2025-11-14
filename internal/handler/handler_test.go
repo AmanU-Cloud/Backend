@@ -198,7 +198,7 @@ func TestUploadHandler_Success(t *testing.T) {
 		t.Fatalf("Failed to get operation from cache: %v", err)
 	}
 
-	var operation OperationStatus
+	var operation model.OperationStatus
 	if err := json.Unmarshal(operationData, &operation); err != nil {
 		t.Fatalf("Failed to unmarshal operation: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestUploadHandler_MissingOperationKey(t *testing.T) {
 		t.Errorf("Expected status 400, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var response ErrorResponse
+	var response model.ErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestUploadHandler_OddFileCount(t *testing.T) {
 		t.Errorf("Expected status 400, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var response ErrorResponse
+	var response model.ErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestUploadHandler_DuplicateOperationKey(t *testing.T) {
 		t.Errorf("Expected status 409, got %d. Body: %s", w2.Code, w2.Body.String())
 	}
 
-	var response DuplicateOperationError
+	var response model.DuplicateOperationError
 	if err := json.Unmarshal(w2.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestUploadHandler_WithRealPDFFile(t *testing.T) {
 		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var response UploadResponse
+	var response model.UploadResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -394,10 +394,10 @@ func TestGetHandler_Success(t *testing.T) {
 
 	// Создаем тестовую операцию с валидным UUID
 	operationID := uuid.New().String()
-	operation := OperationStatus{
+	operation := model.OperationStatus{
 		OperationID: operationID,
 		Status:      "NEW",
-		Progress: &Progress{
+		Progress: &model.Progress{
 			Processed: 0,
 			Total:     1,
 		},
@@ -416,7 +416,7 @@ func TestGetHandler_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var response OperationInProgress
+	var response model.OperationInProgress
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -445,7 +445,7 @@ func TestGetHandler_NotFound(t *testing.T) {
 		t.Errorf("Expected status 404, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	var response ErrorResponse
+	var response model.ErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}

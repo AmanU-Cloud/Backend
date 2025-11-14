@@ -133,6 +133,24 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Парсим первые два PDF-файла (до/после)
+	if len(files) >= 2 {
+		f0, err0 := files[0].Open()
+		if err0 == nil {
+			defer f0.Close()
+			f1, err1 := files[1].Open()
+			if err1 == nil {
+				defer f1.Close()
+				profileBefore, profileAfter, errParse := file.ParsePairPDFs(h.parser, f0, f1)
+				if errParse != nil {
+					slog.Warn("parse pdf pair failed", "err", errParse)
+				} else {
+					slog.Debug("Parsed pair", "before", profileBefore.Portrait.ChildName, "after", profileAfter.Portrait.ChildName)
+				}
+			}
+		}
+	}
+
 	// Создание операции
 	operationID := uuid.New().String()
 	pairsCount := len(files) / 2
