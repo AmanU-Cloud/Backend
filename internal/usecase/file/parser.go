@@ -1,10 +1,7 @@
 package file
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,8 +10,6 @@ import (
 	"strings"
 
 	"github.com/Caritas-Team/reviewer/internal/model"
-
-	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
 // PDFParser парсит PDF файлы и извлекает данные согласно OpenAPI схеме
@@ -25,38 +20,10 @@ func NewPDFParser() *PDFParser {
 }
 
 // ParsePDF парсит PDF файл и возвращает ChildProfile
-func (p *PDFParser) ParsePDF(reader io.Reader) (*model.ChildProfile, error) {
-	// Читаем весь файл в память
-	data, err := io.ReadAll(reader)
+func (p *PDFParser) ParsePDF(file os.File) (*model.ChildProfile, error) {
+	text, err := extractTextWithPDFCPU(file.Name())
 	if err != nil {
-		return nil, fmt.Errorf("failed to read PDF: %w", err)
-	}
-
-	// Создаем временный файл для pdfcpu
-	tmpFile, err := os.CreateTemp("", "pdf_parse_*.pdf")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	if _, err := tmpFile.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to write temp file: %w", err)
-	}
-	tmpFile.Close()
-
-	// Извлекаем текст используя pdfcpu extract команду
-	text, err := extractTextWithPDFCPU(tmpFile.Name())
-	if err != nil {
-		slog.Warn("Failed to extract text with pdfcpu, trying alternative method", "err", err)
-		// Альтернативный метод: используем ReadContext для валидации и базового парсинга
-		ctx, err := api.ReadContext(bytes.NewReader(data), nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read PDF context: %w", err)
-		}
-		slog.Info("PDF validated", "pages", ctx.PageCount)
-		// Если не удалось извлечь текст, возвращаем пустой профиль
-		text = ""
+		return nil, err
 	}
 
 	// Парсим структурированные данные из текста
@@ -81,10 +48,15 @@ func extractTextWithPDFCPU(pdfPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			// ?
+		}
+	}(tmpDir)
 
 	// Используем pdfcpu extract для извлечения текста
-	cmd := exec.Command("pdfcpu", "extract", "-mode", "text", pdfPath, tmpDir)
+	cmd := exec.Command("pdfcpu", "extract", "-mode", "content", pdfPath, tmpDir)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("pdfcpu extract failed: %w, output: %s", err, string(output))

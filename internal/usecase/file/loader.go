@@ -1,13 +1,13 @@
 package file
 
 import (
-	"io"
+	"os"
 
 	"github.com/Caritas-Team/reviewer/internal/model"
 )
 
 // ParsePairPDFs парсит два PDF-файла и возвращает профили до/после
-func ParsePairPDFs(parser *PDFParser, before, after io.Reader) (*model.ChildProfile, *model.ChildProfile, error) {
+func ParsePairPDFs(parser *PDFParser, before, after os.File) (*model.ChildProfile, *model.ChildProfile, error) {
 	profileBefore, err := parser.ParsePDF(before)
 	if err != nil {
 		return nil, nil, err
